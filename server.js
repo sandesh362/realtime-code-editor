@@ -15,7 +15,6 @@ app.use((req, res, next) => {
 
 const userSocketMap = {};
 function getAllConnectedClients(roomId) {
-    // Map
     return Array.from(io.sockets.adapter.rooms.get(roomId) || []).map(
         (socketId) => {
             return {
@@ -48,6 +47,16 @@ io.on('connection', (socket) => {
 
     socket.on(ACTIONS.SYNC_CODE, ({ socketId, code }) => {
         io.to(socketId).emit(ACTIONS.CODE_CHANGE, { code });
+    });
+
+    // Chat functionality
+    socket.on(ACTIONS.SEND_MESSAGE, ({ roomId, message, username }) => {
+        // Broadcast the message to the room
+        io.to(roomId).emit(ACTIONS.RECEIVE_MESSAGE, {
+            username,
+            message,
+            socketId: socket.id,
+        });
     });
 
     socket.on('disconnecting', () => {

@@ -19,7 +19,8 @@ const EditorPage = () => {
     const reactNavigator = useNavigate();
     const [clients, setClients] = useState([]);
     const [code, setCode] = useState('');
-
+    const [messages, setMessages] = useState([]); // For chat messages
+    const [newMessage, setNewMessage] = useState(''); // For the chat input
 
     useEffect(() => {
         const init = async () => {
@@ -66,12 +67,18 @@ const EditorPage = () => {
                     });
                 }
             );
+
+            // Listening for chat messages
+            socketRef.current.on(ACTIONS.RECEIVE_MESSAGE, ({ username, message }) => {
+                setMessages((prevMessages) => [...prevMessages, { username, message }]);
+            });
         };
         init();
         return () => {
             socketRef.current.disconnect();
             socketRef.current.off(ACTIONS.JOINED);
             socketRef.current.off(ACTIONS.DISCONNECTED);
+            socketRef.current.off(ACTIONS.RECEIVE_MESSAGE); // Clean up chat listener
         };
     }, []);
 
@@ -85,20 +92,34 @@ const EditorPage = () => {
         }
     }
 
-    const downloadFile = () => {
+    async function downloadFile () {
         const blob = new Blob([code], { type: 'text/plain' }); // Create a Blob from the code
         const url = URL.createObjectURL(blob); // Create a URL for the Blob
         const a = document.createElement('a'); // Create an anchor element
         a.href = url; // Set the href to the Blob URL
-        a.download = `code-${roomId}.txt`; // Set the default file name
+        a.download = `code-${roomId}.js`; // Set the default file name
         document.body.appendChild(a); // Append it to the body
         a.click(); // Programmatically click the link to trigger the download
         document.body.removeChild(a); // Clean up and remove the link
     };
 
-
     function leaveRoom() {
         reactNavigator('/');
+    }
+
+    function handleSendMessage() {
+        if (newMessage.trim() !== '') {
+            socketRef.current.emit(ACTIONS.SEND_MESSAGE, {
+                roomId,
+                message: newMessage,
+                username: location.state?.username,
+            });
+            setMessages((prevMessages) => [
+                ...prevMessages,
+                { username: location.state?.username, message: newMessage },
+            ]);
+            setNewMessage(''); // Clear the input
+        }
     }
 
     if (!location.state) {
@@ -136,6 +157,7 @@ const EditorPage = () => {
                     Leave
                 </button>
             </div>
+            
             <div className="editorWrap">
                 <Editor
                     socketRef={socketRef}
@@ -145,7 +167,26 @@ const EditorPage = () => {
                         setCode(code); // Update the state with the current code
                     }}
                 />
+            </div>
 
+            {/* Chat Section */}
+            <div className="chatWrap">
+                <div className="chatMessages">
+                    {messages.map((msg, index) => (
+                        <div key={index} className="message">
+                            <strong>{msg.username}: </strong>{msg.message}
+                        </div>
+                    ))}
+                </div>
+                <div className="chatInputWrap">
+                    <input
+                        type="text"
+                        value={newMessage}
+                        onChange={(e) => setNewMessage(e.target.value)}
+                        placeholder="Type a message..."
+                    />
+                    <button onClick={handleSendMessage}>Send</button>
+                </div>
             </div>
         </div>
     );

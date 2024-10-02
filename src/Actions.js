@@ -5,6 +5,10 @@ const ACTIONS = {
     CODE_CHANGE: 'code-change',
     SYNC_CODE: 'sync-code',
     LEAVE: 'leave',
+    
+    // Chat related actions
+    SEND_MESSAGE: 'send-message',
+    RECEIVE_MESSAGE: 'receive-message',
 };
 
 module.exports = ACTIONS;
