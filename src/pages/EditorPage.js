@@ -18,6 +18,8 @@ const EditorPage = () => {
     const { roomId } = useParams();
     const reactNavigator = useNavigate();
     const [clients, setClients] = useState([]);
+    const [code, setCode] = useState('');
+
 
     useEffect(() => {
         const init = async () => {
@@ -83,6 +85,18 @@ const EditorPage = () => {
         }
     }
 
+    const downloadFile = () => {
+        const blob = new Blob([code], { type: 'text/plain' }); // Create a Blob from the code
+        const url = URL.createObjectURL(blob); // Create a URL for the Blob
+        const a = document.createElement('a'); // Create an anchor element
+        a.href = url; // Set the href to the Blob URL
+        a.download = `code-${roomId}.txt`; // Set the default file name
+        document.body.appendChild(a); // Append it to the body
+        a.click(); // Programmatically click the link to trigger the download
+        document.body.removeChild(a); // Clean up and remove the link
+    };
+
+
     function leaveRoom() {
         reactNavigator('/');
     }
@@ -115,6 +129,9 @@ const EditorPage = () => {
                 <button className="btn copyBtn" onClick={copyRoomId}>
                     Copy ROOM ID
                 </button>
+                <button className="btn downloadBtn" onClick={downloadFile}>
+                    Download Code
+                </button>
                 <button className="btn leaveBtn" onClick={leaveRoom}>
                     Leave
                 </button>
@@ -125,8 +142,10 @@ const EditorPage = () => {
                     roomId={roomId}
                     onCodeChange={(code) => {
                         codeRef.current = code;
+                        setCode(code); // Update the state with the current code
                     }}
                 />
+
             </div>
         </div>
     );
