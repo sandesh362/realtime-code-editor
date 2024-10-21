@@ -45,7 +45,6 @@ const EditorPage = () => {
             socketRef.current.on(ACTIONS.JOINED, ({ clients, username, socketId }) => {
                 if (username !== location.state?.username) {
                     toast.success(`${username} joined the room.`);
-                    console.log(`${username} joined`);
                 }
                 setClients(clients);
                 socketRef.current.emit(ACTIONS.SYNC_CODE, {
@@ -74,7 +73,7 @@ const EditorPage = () => {
             socketRef.current.off(ACTIONS.DISCONNECTED);
             socketRef.current.off(ACTIONS.RECEIVE_MESSAGE); // Clean up chat listener
         };
-    }, []);
+    }, [reactNavigator, roomId, location.state?.username]);
 
     async function copyRoomId() {
         try {
@@ -82,7 +81,6 @@ const EditorPage = () => {
             toast.success('Room ID has been copied to your clipboard');
         } catch (err) {
             toast.error('Could not copy the Room ID');
-            console.error(err);
         }
     }
 
@@ -108,7 +106,6 @@ const EditorPage = () => {
                 message: newMessage,
                 username: location.state?.username,
             });
-            // No need to update messages here. We'll rely on the server to broadcast the message to all clients.
             setNewMessage(''); // Clear the input
         }
     }

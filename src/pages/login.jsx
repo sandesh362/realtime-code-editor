@@ -1,7 +1,8 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom'; // Import useNavigate
 import './login.css'; // Importing CSS
-
+import google from "./images/google.svg"
+// import codeglimpselogo from './images/codeglimpselogo.png'
 const Login = () => {
     const navigate = useNavigate(); // Initialize navigate
 
@@ -37,9 +38,10 @@ const Login = () => {
                             <input type="password" id="password" placeholder="Password" aria-label="Password" />
                         </div>
 
-                        <div className="form-footer">
-                            <label className="remember-me">
-                                <input type="checkbox" /> Remember me
+                        <div className="form-footer w-[100%] justify-between">
+                            <label className="remember-me flex flex-row justify-between items-center">
+                                <div><input type="checkbox" className='w-[15px] h-[15px]' /> </div>
+                                 <span className=''>Remember me</span>
                             </label>
                             <a href="#" className="forgot-link">Forgot password?</a>
                         </div>
@@ -54,15 +56,15 @@ const Login = () => {
 
                     {/* Social Login */}
                     <div className="social-login">
-                        <a href="#"><img src="https://upload.wikimedia.org/wikipedia/commons/5/53/Google_%22G%22_Logo.svg" alt="Google" /></a>
-                        <a href="#"><img src="https://upload.wikimedia.org/wikipedia/commons/0/05/Facebook_Logo_%282019%29.png.svg" alt="Facebook" /></a>
+                        <a href="#"><img src={google} alt="Google" /></a>
+                        <a href="#"><img src={'https://cdn-icons-png.freepik.com/512/2504/2504903.png'} alt="Facebook" /></a>
                         <a href="#"><img src="https://upload.wikimedia.org/wikipedia/commons/9/91/Octicons-mark-github.svg" alt="GitHub" /></a>
                     </div>
 
                     {/* Sign Up Link */}
                     <div className="signup-text">
                         <p>Don't have an account? 
-                            <button onClick={() => navigate('/signup')} className="signup-button">Signup</button>
+                            <button onClick={() => navigate('/signup')} className="signup-button hover:text-[#8B5CF6] text-white duration-200">Signup</button>
                         </p>
                     </div>
                 </div>

@@ -18,16 +18,24 @@ const Editor = ({ socketRef, roomId, onCodeChange }) => {
     });
     const [activeFile, setActiveFile] = useState('index.html');
 
+    const getModeForFile = (fileName) => {
+        if (fileName.endsWith('.html')) return 'htmlmixed';
+        if (fileName.endsWith('.css')) return 'css';
+        if (fileName.endsWith('.js')) return 'javascript';
+        return 'htmlmixed';
+    };
+
     useEffect(() => {
-        async function init() {
+        const initEditor = async () => {
             editorRef.current = Codemirror.fromTextArea(
                 document.getElementById('realtimeEditor'),
                 {
-                    mode: 'htmlmixed', // Default mode can be HTML mixed
+                    mode: getModeForFile(activeFile),
                     theme: 'dracula',
                     autoCloseTags: true,
                     autoCloseBrackets: true,
                     lineNumbers: true,
+                    direction: 'ltr',
                 }
             );
 
@@ -37,79 +45,90 @@ const Editor = ({ socketRef, roomId, onCodeChange }) => {
                 onCodeChange(code);
 
                 if (origin !== 'setValue') {
-                    const updatedFiles = {
-                        ...files,
-                        [activeFile]: code
-                    };
+                    const updatedFiles = { ...files, [activeFile]: code };
                     setFiles(updatedFiles);
+
                     socketRef.current.emit(ACTIONS.CODE_CHANGE, {
                         roomId,
                         files: updatedFiles,
                     });
                 }
             });
+        };
+
+        initEditor();
+
+        // Cleanup on unmount
+        return () => {
+            if (editorRef.current) {
+                editorRef.current.toTextArea();
+            }
+        };
+    }, []); // Only initialize on mount
+
+    useEffect(() => {
+        if (editorRef.current) {
+            editorRef.current.setOption('mode', getModeForFile(activeFile));
+            editorRef.current.setValue(files[activeFile] || '');
         }
-        init();
     }, [activeFile, files]);
 
     useEffect(() => {
         if (socketRef.current) {
-            socketRef.current.on(ACTIONS.CODE_CHANGE, ({ files }) => {
-                if (files) {
-                    setFiles(files);
-                    editorRef.current.setValue(files[activeFile] || '');
+            const handleCodeChange = ({ files: newFiles }) => {
+                if (newFiles) {
+                    setFiles(newFiles);
+                    editorRef.current.setValue(newFiles[activeFile] || '');
                 }
-            });
-        }
+            };
 
-        return () => {
-            socketRef.current.off(ACTIONS.CODE_CHANGE);
-        };
-    }, [socketRef.current, activeFile]);
+            socketRef.current.on(ACTIONS.CODE_CHANGE, handleCodeChange);
+            return () => {
+                socketRef.current.off(ACTIONS.CODE_CHANGE, handleCodeChange);
+            };
+        }
+    }, [socketRef, activeFile]);
 
     const createNewFile = (fileName) => {
-        setFiles((prevFiles) => ({
-            ...prevFiles,
-            [fileName]: '',
-        }));
+        setFiles(prevFiles => ({ ...prevFiles, [fileName]: '' }));
         setActiveFile(fileName);
-        editorRef.current.setValue('');
-    };
-
-    const handleFileChange = (file) => {
-        setActiveFile(file);
-        editorRef.current.setValue(files[file] || '');
     };
 
     const deleteFile = (file) => {
-        const updatedFiles = { ...files };
-        delete updatedFiles[file]; // Remove the selected file
-        setFiles(updatedFiles);
-        
-        // Switch active file to another available file
-        const remainingFiles = Object.keys(updatedFiles);
-        if (remainingFiles.length > 0) {
-            setActiveFile(remainingFiles[0]);
-            editorRef.current.setValue(updatedFiles[remainingFiles[0]] || '');
-        } else {
-            setActiveFile(''); // Clear active file if none remain
-            editorRef.current.setValue('');
-        }
+        setFiles(prevFiles => {
+            const updatedFiles = { ...prevFiles };
+            delete updatedFiles[file];
+            const remainingFiles = Object.keys(updatedFiles);
+            setActiveFile(remainingFiles.length ? remainingFiles[0] : '');
+            return updatedFiles;
+        });
+    };
+
+    const downloadCode = () => {
+        const zipContent = Object.keys(files).map(fileName => ({
+            name: fileName,
+            content: files[fileName]
+        }));
+        const blob = new Blob([JSON.stringify(zipContent)], { type: 'application/json' });
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(blob);
+        link.download = 'code_files.json';
+        link.click();
     };
 
     return (
         <div className="editor-container">
-            <div className="file-tabs">
-                {Object.keys(files).map((file) => (
+            <div className="flex">
+                {Object.keys(files).map(file => (
                     <div key={file} className="file-tab-container">
                         <button 
-                            className={`file-tab ${activeFile === file ? 'active' : ''}`} 
-                            onClick={() => handleFileChange(file)}
+                            className={`file-tab ${activeFile === file ? 'bg-blue-500 text-white' : 'bg-gray-700 text-gray-300'} hover:bg-blue-600 focus:outline-none transition-colors px-4 py-2 rounded`}
+                            onClick={() => setActiveFile(file)}
                         >
                             {file}
                         </button>
                         <button 
-                            className="delete-file" 
+                            className="delete-file text-red-500 hover:text-red-700 transition-colors focus:outline-none ml-2"
                             onClick={() => deleteFile(file)}
                         >
                             🗑️
@@ -117,79 +136,13 @@ const Editor = ({ socketRef, roomId, onCodeChange }) => {
                     </div>
                 ))}
                 <button 
-                    className="new-file" 
+                    className="new-file bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded focus:outline-none transition-colors ml-2"
                     onClick={() => createNewFile(`newFile${Object.keys(files).length + 1}.html`)}
                 >
                     New File
                 </button>
             </div>
-            <textarea id="realtimeEditor"></textarea>
-            <style jsx>{`
-                .editor-container {
-                    display: flex;
-                    flex-direction: column;
-                }
-
-                .file-tabs {
-                    display: flex;
-                    justify-content: flex-start;
-                    margin-bottom: 10px;
-                }
-
-                .file-tab-container {
-                    display: flex;
-                    align-items: center;
-                }
-
-                .file-tab {
-                    padding: 10px;
-                    cursor: pointer;
-                    background: #555; /* Background color */
-                    color: white; /* Text color */
-                    border: none;
-                    margin-right: 5px;
-                    transition: background 0.3s;
-                    border-radius: 4px; /* Rounded corners */
-                }
-
-                .file-tab.active {
-                    background: #007bff; /* Active tab color */
-                }
-
-                .file-tab:hover {
-                    background: #777; /* Hover effect */
-                }
-
-                .delete-file {
-                    background: transparent; /* Transparent background */
-                    color: red; /* Delete icon color */
-                    border: none; /* No border */
-                    cursor: pointer; /* Pointer cursor */
-                    font-size: 16px; /* Icon size */
-                    margin-left: 5px; /* Space between file tab and delete icon */
-                }
-
-                .new-file {
-                    padding: 10px;
-                    background: #28a745; /* New file button color */
-                    color: white; /* Button text color */
-                    border: none;
-                    border-radius: 4px; /* Rounded corners */
-                    cursor: pointer;
-                    margin-left: 5px; /* Space from the last tab */
-                    transition: background 0.3s;
-                }
-
-                .new-file:hover {
-                    background: #218838; /* Darker green on hover */
-                }
-
-                textarea {
-                    height: 500px; /* Set a height for the editor */
-                    width: 100%; /* Make the editor full width */
-                    border: 1px solid #ccc; /* Border for textarea */
-                }
-            `}</style>
+            <textarea id="realtimeEditor" className="w-full h-96 border-gray-300 border rounded mt-4"></textarea>
         </div>
     );
 };

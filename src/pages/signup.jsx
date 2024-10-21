@@ -1,6 +1,7 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom'; // Import useNavigate
 import './signup.css'; // Importing CSS
+import google from "./images/google.svg"
 
 const Signup = () => {
     const navigate = useNavigate(); // Initialize navigate
@@ -53,15 +54,15 @@ const Signup = () => {
 
                     {/* Social Signup */}
                     <div className="social-signup">
-                        <a href="#"><img src="https://upload.wikimedia.org/wikipedia/commons/5/53/Google_%22G%22_Logo.svg" alt="Google" /></a>
-                        <a href="#"><img src="https://upload.wikimedia.org/wikipedia/commons/0/05/Facebook_Logo_%282019%29.png.svg" alt="Facebook" /></a>
+                        <a href="#"><img src={google} alt="Google" /></a>
+                        <a href="#"><img src={'https://cdn-icons-png.freepik.com/512/2504/2504903.png'} alt="Facebook" /></a>
                         <a href="#"><img src="https://upload.wikimedia.org/wikipedia/commons/9/91/Octicons-mark-github.svg" alt="GitHub" /></a>
                     </div>
 
                     {/* Login Link */}
                     <div className="login-text">
                         <p>Already have an account? 
-                            <button onClick={() => navigate('/')} className="login-button">Login</button> {/* Navigate to '/' for login */}
+                            <button onClick={() => navigate('/')} className="login-button hover:text-[#8B5CF6] text-white duration-200">Login</button> {/* Navigate to '/' for login */}
                         </p>
                     </div>
                 </div>

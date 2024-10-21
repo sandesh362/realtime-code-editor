@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { v4 as uuidV4 } from 'uuid';
 import toast from 'react-hot-toast';
 import { useNavigate } from 'react-router-dom';
+import codeglimpselogo from './images/codeglimpselogo.png'
 
 const Home = () => {
     const navigate = useNavigate();
@@ -14,7 +15,7 @@ const Home = () => {
         const id = uuidV4();
         setRoomId(id);
         toast.success('Created a new room');
-    };
+    }; 
 
     const joinRoom = () => {
         if (!roomId || !username) {
@@ -39,16 +40,21 @@ const Home = () => {
     return (
         <div style={styles.homePageWrapper}>
             {/* Creative Title for Code Glimpse */}
-            <h1 style={styles.editorTitle}>Code Glimpse</h1>
             <div style={styles.formWrapper}>
+            <div className='flex flex-col items-center justify-center '>
+            <img src={codeglimpselogo} className='w-[200px]'></img>
+            <h1 style={styles.editorTitle}>Code Glimpse</h1>
+            </div>
                 <h4 style={styles.mainLabel}>Paste invitation ROOM ID</h4>
                 <div style={styles.inputGroup}>
-                    <input
+                
+                     <input
                         type="text"
                         style={styles.inputBox}
                         placeholder="ROOM ID"
                         onChange={(e) => setRoomId(e.target.value)}
                         value={roomId}
+                         className='text-black'
                         onKeyUp={handleInputEnter}
                     />
                     <input
@@ -57,6 +63,7 @@ const Home = () => {
                         placeholder="USERNAME"
                         onChange={(e) => setUsername(e.target.value)}
                         value={username}
+                        className='text-black'
                         onKeyUp={handleInputEnter}
                     />
                     <button style={styles.joinBtn} onClick={joinRoom}>
