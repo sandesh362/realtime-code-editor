@@ -8,6 +8,7 @@ import 'codemirror/mode/css/css'; // For CSS
 import 'codemirror/addon/edit/closetag';
 import 'codemirror/addon/edit/closebrackets';
 import ACTIONS from '../Actions';
+import { AiFillFileAdd } from "react-icons/ai";
 
 const Editor = ({ socketRef, roomId, onCodeChange }) => {
     const editorRef = useRef(null);
@@ -19,66 +20,72 @@ const Editor = ({ socketRef, roomId, onCodeChange }) => {
     const [activeFile, setActiveFile] = useState('index.html');
 
     const getModeForFile = (fileName) => {
-        if (fileName.endsWith('.html')) return 'htmlmixed';
+        if (fileName.endsWith('.html')) return 'xml'; // Correct mode for HTML
         if (fileName.endsWith('.css')) return 'css';
         if (fileName.endsWith('.js')) return 'javascript';
-        return 'htmlmixed';
+        return 'xml'; // Default to XML mode
     };
 
     useEffect(() => {
-        const initEditor = async () => {
-            editorRef.current = Codemirror.fromTextArea(
-                document.getElementById('realtimeEditor'),
-                {
-                    mode: getModeForFile(activeFile),
-                    theme: 'dracula',
-                    autoCloseTags: true,
-                    autoCloseBrackets: true,
-                    lineNumbers: true,
-                    direction: 'ltr',
-                }
-            );
+        // Initialize CodeMirror editor
+        editorRef.current = Codemirror.fromTextArea(
+            document.getElementById('realtimeEditor'),
+            {
+                mode: getModeForFile(activeFile),
+                theme: 'dracula',
+                autoCloseTags: true,
+                autoCloseBrackets: true,
+                lineNumbers: true,
+                direction: 'ltr',
+            }
+        );
 
-            editorRef.current.on('change', (instance, changes) => {
-                const { origin } = changes;
-                const code = instance.getValue();
-                onCodeChange(code);
+        // Add 'change' listener
+        editorRef.current.on('change', (instance, changes) => {
+            const { origin } = changes;
+            const code = instance.getValue();
+            onCodeChange(code);
 
-                if (origin !== 'setValue') {
-                    const updatedFiles = { ...files, [activeFile]: code };
-                    setFiles(updatedFiles);
+            if (origin !== 'setValue') {
+                const updatedFiles = { ...files, [activeFile]: code };
+                setFiles(updatedFiles);
 
-                    socketRef.current.emit(ACTIONS.CODE_CHANGE, {
-                        roomId,
-                        files: updatedFiles,
-                    });
-                }
-            });
-        };
+                // Emit code change event
+                socketRef.current.emit(ACTIONS.CODE_CHANGE, {
+                    roomId,
+                    files: updatedFiles,
+                });
+            }
+        });
 
-        initEditor();
-
-        // Cleanup on unmount
         return () => {
             if (editorRef.current) {
-                editorRef.current.toTextArea();
+                editorRef.current.toTextArea(); // Cleanup
             }
         };
-    }, []); // Only initialize on mount
+    }, []); // Empty dependency array ensures the editor is only initialized once
 
+    // Update editor mode when active file changes
     useEffect(() => {
         if (editorRef.current) {
+            // Update the mode, but do not reset the value
             editorRef.current.setOption('mode', getModeForFile(activeFile));
             editorRef.current.setValue(files[activeFile] || '');
         }
-    }, [activeFile, files]);
+    }, [activeFile]); // Only re-run when active file changes
 
+    // Socket listener for code changes
     useEffect(() => {
         if (socketRef.current) {
             const handleCodeChange = ({ files: newFiles }) => {
                 if (newFiles) {
                     setFiles(newFiles);
-                    editorRef.current.setValue(newFiles[activeFile] || '');
+                    if (editorRef.current) {
+                        // Update the editor only if the content is different
+                        if (editorRef.current.getValue() !== newFiles[activeFile]) {
+                            editorRef.current.setValue(newFiles[activeFile] || '');
+                        }
+                    }
                 }
             };
 
@@ -89,27 +96,35 @@ const Editor = ({ socketRef, roomId, onCodeChange }) => {
         }
     }, [socketRef, activeFile]);
 
-    const createNewFile = (fileName) => {
-        setFiles(prevFiles => ({ ...prevFiles, [fileName]: '' }));
-        setActiveFile(fileName);
+    // Create a new file with validation
+    const createNewFile = () => {
+        const fileName = prompt("Enter new file name (e.g., newFile.js):");
+        if (fileName && !files[fileName]) {
+            setFiles(prevFiles => ({ ...prevFiles, [fileName]: '' }));
+            setActiveFile(fileName);
+        } else if (files[fileName]) {
+            alert('File already exists!');
+        }
     };
 
+    // Delete file and handle empty state
     const deleteFile = (file) => {
         setFiles(prevFiles => {
             const updatedFiles = { ...prevFiles };
             delete updatedFiles[file];
             const remainingFiles = Object.keys(updatedFiles);
-            setActiveFile(remainingFiles.length ? remainingFiles[0] : '');
+            setActiveFile(remainingFiles.length ? remainingFiles[0] : null);
             return updatedFiles;
         });
     };
 
+    // Download the current files as a JSON
     const downloadCode = () => {
         const zipContent = Object.keys(files).map(fileName => ({
             name: fileName,
             content: files[fileName]
         }));
-        const blob = new Blob([JSON.stringify(zipContent)], { type: 'application/json' });
+        const blob = new Blob([JSON.stringify(zipContent, null, 2)], { type: 'text/plain' });
         const link = document.createElement('a');
         link.href = URL.createObjectURL(blob);
         link.download = 'code_files.json';
@@ -135,11 +150,8 @@ const Editor = ({ socketRef, roomId, onCodeChange }) => {
                         </button>
                     </div>
                 ))}
-                <button 
-                    className="new-file bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded focus:outline-none transition-colors ml-2"
-                    onClick={() => createNewFile(`newFile${Object.keys(files).length + 1}.html`)}
-                >
-                    New File
+                <button onClick={createNewFile}>
+                    <AiFillFileAdd size={28} color="blue" />
                 </button>
             </div>
             <textarea id="realtimeEditor" className="w-full h-96 border-gray-300 border rounded mt-4"></textarea>
